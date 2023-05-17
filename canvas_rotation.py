@@ -1,13 +1,13 @@
-import pygame, expyriment, math
+import pygame, expyriment, math, random
 from expyriment import stimuli, design, control, misc
 from pygame.transform import rotozoom
 
 # PARAMETERS
 
-n_trials = 10
+n_trials = 25
 delay_before_rotation = 1000
-delay_rotation_change_list = [500,700,900,1100]
-delay_presentation_list = [-100, -50, -25, 0, 25, 50, 100]
+delay_rotation_change_list = [500,700,800, 900,1100]
+delay_presentation_list = [-70, -35, 0, 35, 70]
 
 n_disks = 8
 circle_radius = 120
@@ -21,6 +21,10 @@ presentation_time = 55
 white = (240,240,240)
 black = (0,0,0)
 purple = (138, 23, 226)
+
+yes_detection = 'f'
+no_detection = 'j'
+max_response_delay = 2000
 
 # FUNCTIONS
 
@@ -53,6 +57,19 @@ def create_canvas_with_circle():
     circle_stim.plot(canvas)
     return canvas
 
+def setting_the_trials(n_trials):
+    trials_list = []
+    for x in range (n_trials):
+        for y in range (len(delay_rotation_change_list)):
+            delay_rotation_change = delay_rotation_change_list(y)
+            for w in range (len(delay_presentation_list)):
+                delay_presentation = delay_presentation_list(w) 
+        i_trial = (delay_rotation_change, delay_presentation)
+        trials_list.append(i_trial)
+    random.shuffle(trials_list)
+    return trials_list
+
+
 def setting_the_delays(delay_presentation, delay_rotation_change):
     delay1_start = delay_presentation+delay_rotation_change
     delay1_end = delay1_start+presentation_time
@@ -63,6 +80,7 @@ def setting_the_delays(delay_presentation, delay_rotation_change):
 # STARTING THE EXPERIMENT
 exp = design.Experiment(name="Rotating circle with disks", background_colour=white)
 expyriment.control.initialize(exp)
+setting_the_trials(n_trials)
 
 # CREATING THE CANVAS
 full_canvas = create_canvas_with_circle()
@@ -93,7 +111,21 @@ setting_canvas_list(halfL_canvas, halfL_canvas_list)
 setting_canvas_list(halfR_canvas, halfR_canvas_list)
 
 # CREATING THE VARIABLES
-exp.add_data_variable_names(['trial', 'delay_rotation_change', 'stimulus_delay', 'detection'])
+exp.add_data_variable_names(['trial', 'delay_rotation_change', 'stimulus_delay', 'detection', 'reaction time'])
+
+# PRESENTING THE INSTRUCTIONS
+lankscreen = stimuli.BlankScreen()
+instructions = stimuli.TextScreen("Instructions",
+    f"""You will see one circle composed of eight disks rotate and change rotation.
+
+    Your task is to report every time you see one odd disk. 
+    When one disk behaves, or appears to be different than the others, press {yes_detection}.
+    If you have not, press {no_detection}.
+
+    Press the spacebar to start.""")
+instructions.present()
+exp.keyboard.wait()
+expyriment.control.start(exp)
 
 # ROTATING THE FULL DISK
 for i_trial in range (n_trials):
@@ -101,12 +133,11 @@ for i_trial in range (n_trials):
     blankscreen.present()
     full_canvas.present()
     pygame.time.wait(delay_before_rotation)
-    delay_rotation_change = 1000
-    stimulus_delay = 50
+    delay_rotation_change, stimulus_delay = trials_list(i_trial)
     delay1_start, delay1_end, delay2_start, delay2_end = setting_the_delays(stimulus_delay, delay_rotation_change)
     clock = expyriment.misc.Clock()
     time_list = []
-    while clock.time < 5000:
+    while clock.time < 2000:
         while clock.time < delay_rotation_change:
             for i in range (number_of_circle_positions):
                 t1 = clock.time
@@ -129,10 +160,12 @@ for i_trial in range (n_trials):
                full_canvas_list[landmark-x].present()
             t = clock.time - t1
             time_list.append(t)
-    expyriment.data.add([i_trial, delay_rotation_change, stimulus_delay])
+    blankscreen.present()
+    key, rt = exp.keyboard.wait_char([yes_detection, no_detection], duration=max_response_delay)
+    exp.data.add([i_trial, delay_rotation_change, stimulus_delay, rt])
+    print(i_trial)
 
 #prompt
-
 print(time_list)
 
 # END
