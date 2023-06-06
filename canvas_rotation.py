@@ -5,9 +5,10 @@ from pygame.transform import rotozoom
 # PARAMETERS
 
 n_trials = 25
-delay_before_rotation = 1000
-delay_rotation_change_list = [500,700,800, 900,1100]
+delay_before_rotation = 500
 delay_presentation_list = [-70, -35, 0, 35, 70]
+presentation_time_list = [15, 30, 45, 60]
+delay_rotation_change = 800
 
 n_disks = 8
 circle_radius = 120
@@ -15,8 +16,6 @@ disk_radius = 15
 rotation_angle = 3
 number_of_circle_positions = int(360/rotation_angle)
 cut_angle = math.pi
-
-presentation_time = 55
 
 white = (240,240,240)
 black = (0,0,0)
@@ -60,12 +59,12 @@ def create_canvas_with_circle():
 def setting_the_trials(n_trials):
     trials_list = []
     for x in range (n_trials):
-        for y in range (len(delay_rotation_change_list)):
-            delay_rotation_change = delay_rotation_change_list(y)
+        for y in range (len(presentation_time_list)):
+            presentation_time = presentation_time_list[y]
             for w in range (len(delay_presentation_list)):
-                delay_presentation = delay_presentation_list(w) 
-        i_trial = (delay_rotation_change, delay_presentation)
-        trials_list.append(i_trial)
+                delay_presentation = delay_presentation_list[w] 
+                i_trial = (presentation_time, delay_presentation)
+                trials_list.append(i_trial)
     random.shuffle(trials_list)
     return trials_list
 
@@ -80,7 +79,7 @@ def setting_the_delays(delay_presentation, delay_rotation_change):
 # STARTING THE EXPERIMENT
 exp = design.Experiment(name="Rotating circle with disks", background_colour=white)
 expyriment.control.initialize(exp)
-setting_the_trials(n_trials)
+trials_list = setting_the_trials(n_trials)
 
 # CREATING THE CANVAS
 full_canvas = create_canvas_with_circle()
@@ -119,10 +118,10 @@ instructions = stimuli.TextScreen("Instructions",
     f"""You will see one circle composed of eight disks rotate and change rotation.
 
     Your task is to report every time you see one odd disk. 
-    When one disk behaves, or appears to be different than the others, press {yes_detection}.
-    If you have not, press {no_detection}.
+    When one disk appears to be different than the others, press {yes_detection}.
+    If all disks look the same to you, press {no_detection}.
 
-    Press the spacebar to start.""")
+    Press the spacebar to start.""", text_colour=black)
 instructions.present()
 exp.keyboard.wait()
 expyriment.control.start(exp)
@@ -133,16 +132,18 @@ for i_trial in range (n_trials):
     blankscreen.present()
     full_canvas.present()
     pygame.time.wait(delay_before_rotation)
-    delay_rotation_change, stimulus_delay = trials_list(i_trial)
+    presentation_time, stimulus_delay = trials_list[i_trial]
     delay1_start, delay1_end, delay2_start, delay2_end = setting_the_delays(stimulus_delay, delay_rotation_change)
+    print(delay1_start, delay1_end, delay2_start, delay2_end)
     clock = expyriment.misc.Clock()
     time_list = []
-    while clock.time < 2000:
+    while clock.time < 1200:
         while clock.time < delay_rotation_change:
             for i in range (number_of_circle_positions):
                 t1 = clock.time
                 if t1 >delay1_start and t1 <delay1_end:
                     halfL_canvas_list[i].present()
+                    print(t1)
                 elif t1 >delay2_start and t1 <delay2_end:
                     halfR_canvas_list[i].present()
                 else:
@@ -150,8 +151,11 @@ for i_trial in range (n_trials):
                 t = clock.time - t1
                 time_list.append(t)
                 landmark = i
+                if clock.time > delay_rotation_change:
+                    break
         for x in range (number_of_circle_positions):
             t1 = clock.time
+            print(t1)
             if t1 >delay1_start and t1 <delay1_end:
                 halfL_canvas_list[landmark-x].present()
             elif t1 >delay2_start and t1 <delay2_end:
@@ -160,6 +164,8 @@ for i_trial in range (n_trials):
                full_canvas_list[landmark-x].present()
             t = clock.time - t1
             time_list.append(t)
+            if clock.time > 1200:
+                break
     blankscreen.present()
     key, rt = exp.keyboard.wait_char([yes_detection, no_detection], duration=max_response_delay)
     exp.data.add([i_trial, delay_rotation_change, stimulus_delay, rt])
