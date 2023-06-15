@@ -4,7 +4,7 @@ from pygame.transform import rotozoom
 
 # PARAMETERS
 
-n_trials = 25
+n_trials = 100
 delay_before_rotation = 500
 delay_presentation_list = [-70, -35, 0, 35, 70]
 presentation_time_list = [15, 30, 45, 60]
@@ -17,9 +17,9 @@ rotation_angle = 3
 number_of_circle_positions = int(360/rotation_angle)
 cut_angle = math.pi
 
-white = (240,240,240)
+grey = (180,180,180)
 black = (0,0,0)
-purple = (138, 23, 226)
+purple = (138, 100, 219)
 
 yes_detection = 'f'
 no_detection = 'j'
@@ -31,11 +31,11 @@ def mask_half_disk(half_canvas, left_or_right):
     if left_or_right == 'right':
         square_stim = expyriment.stimuli.Rectangle(size=(disk_radius*2, disk_radius),
                                                     position=(x, y-(disk_radius/2)),
-                                                    colour=white)
+                                                    colour=grey)
     else:
         square_stim = expyriment.stimuli.Rectangle(size=(disk_radius*2, disk_radius),
                                                     position=(x, y+(disk_radius/2)),
-                                                    colour=white)
+                                                    colour=grey)
     square_stim.plot(half_canvas)
 
 def setting_canvas_list(canvas, canvas_list):
@@ -43,17 +43,21 @@ def setting_canvas_list(canvas, canvas_list):
         surf_stim = canvas.get_surface_copy()
         surf_stim = rotozoom(surf_stim, i*rotation_angle, 1.0)
         new_canvas = stimuli.Canvas(size=(300,300),
-                                    colour= white)
+                                    colour= grey)
         new_canvas.set_surface(surf_stim)
         canvas_list.append(new_canvas)
 
 def create_canvas_with_circle():
     canvas = stimuli.Canvas(size=(300,300),
-                                colour= white)
+                                colour= grey)
     circle_stim = stimuli.Circle(radius=circle_radius,
                                 line_width=2,
                                 colour= purple)
     circle_stim.plot(canvas)
+    fix_stim = stimuli.Circle(radius=3,
+                                line_width=0,
+                                colour=purple)
+    fix_stim.plot(canvas)
     return canvas
 
 def setting_the_trials(n_trials):
@@ -77,7 +81,7 @@ def setting_the_delays(delay_presentation, delay_rotation_change):
     return delay1_start, delay1_end, delay2_start, delay2_end
 
 # STARTING THE EXPERIMENT
-exp = design.Experiment(name="Rotating circle with disks", background_colour=white)
+exp = design.Experiment(name="Rotating circle with disks", background_colour=grey)
 expyriment.control.initialize(exp)
 trials_list = setting_the_trials(n_trials)
 
@@ -113,7 +117,7 @@ setting_canvas_list(halfR_canvas, halfR_canvas_list)
 exp.add_data_variable_names(['trial', 'delay_rotation_change', 'stimulus_delay', 'detection', 'reaction time'])
 
 # PRESENTING THE INSTRUCTIONS
-lankscreen = stimuli.BlankScreen()
+blankscreen = stimuli.BlankScreen()
 instructions = stimuli.TextScreen("Instructions",
     f"""You will see one circle composed of eight disks rotate and change rotation.
 
@@ -128,13 +132,12 @@ expyriment.control.start(exp)
 
 # ROTATING THE FULL DISK
 for i_trial in range (n_trials):
-    blankscreen = stimuli.BlankScreen()
     blankscreen.present()
     full_canvas.present()
     pygame.time.wait(delay_before_rotation)
     presentation_time, stimulus_delay = trials_list[i_trial]
     delay1_start, delay1_end, delay2_start, delay2_end = setting_the_delays(stimulus_delay, delay_rotation_change)
-    print(delay1_start, delay1_end, delay2_start, delay2_end)
+    #print(delay1_start, delay1_end, delay2_start, delay2_end) #debugging
     clock = expyriment.misc.Clock()
     time_list = []
     while clock.time < 1200:
@@ -148,8 +151,8 @@ for i_trial in range (n_trials):
                     halfR_canvas_list[i].present()
                 else:
                     full_canvas_list[i].present()
-                t = clock.time - t1
-                time_list.append(t)
+                #t = clock.time - t1 #debugging
+                #time_list.append(t) #debugging
                 landmark = i
                 if clock.time > delay_rotation_change:
                     break
@@ -162,17 +165,17 @@ for i_trial in range (n_trials):
                 halfR_canvas_list[landmark-x].present()
             else:
                full_canvas_list[landmark-x].present()
-            t = clock.time - t1
-            time_list.append(t)
+            #t = clock.time - t1 #debugging
+            #time_list.append(t) #debugging
             if clock.time > 1200:
                 break
     blankscreen.present()
     key, rt = exp.keyboard.wait_char([yes_detection, no_detection], duration=max_response_delay)
-    exp.data.add([i_trial, delay_rotation_change, stimulus_delay, rt])
-    print(i_trial)
+    exp_data = exp.data.add([i_trial, delay_rotation_change, stimulus_delay, key, rt])
+    #print(i_trial) #debugging
 
-#prompt
-print(time_list)
+#print(time_list) #debugging
+#expyriment.io.DataFile(exp_data)
 
 # END
 expyriment.control.end()
